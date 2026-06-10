@@ -3,9 +3,9 @@ import pandas as pd
 import numpy as np
 
 # 웹 페이지 제목 및 설명
-st.set_page_config(page_title="정기고사 성적 분석기", layout="centered")
-st.title("📊 정기고사 성적 분석")
-st.markdown("나이스-지필평가조회-교과목별일람표-전체학급 파일(XLS Data)을 저장하고 불러오시면 됩니다.")
+st.set_page_config(page_title="통합 성적 분석기", layout="centered")
+st.title("📊 통합 성적 데이터 분석 시스템")
+st.markdown("모든 반의 성적 데이터를 하나로 통합하여 가로형 표로 성적 분포와 등급을 분석합니다.")
 
 # 1. 파일 업로드 기능
 uploaded_file = st.file_uploader("엑셀 파일을 업로드해 주세요 (.xlsx)", type=["xlsx"])
@@ -42,10 +42,10 @@ if uploaded_file is not None:
         # ----------------------------------------------------
         st.subheader("⚙️ 성취도 분할점수(컷트라인) 설정")
         
-        # 과목 유형 선택 (3등급 vs 6등급)
+        # 과목 유형 선택 (3등급 vs 5등급 vs 6등급)
         subject_type = st.radio(
             "과목의 성취도 등급 유형을 선택하세요:",
-            ["3등급 체제 (A, B, C)", "6등급 체제 (A, B, C, D, E, 미도달)"],
+            ["3등급 체제 (A, B, C)", "5등급 체제 (A, B, C, D, E)", "6등급 체제 (A, B, C, D, E, 미도달)"],
             horizontal=True
         )
         
@@ -54,7 +54,14 @@ if uploaded_file is not None:
             col1, col2 = st.columns(2)
             with col1: cutoff_A = st.number_input("A등급 기준 점수 (이상)", value=80.0, step=1.0)
             with col2: cutoff_B = st.number_input("B등급 기준 점수 (이상)", value=60.0, step=1.0)
-            # 3등급일 때 C등급은 B등급 미만 전원이 되므로 별도 입력 불필요
+            
+        elif subject_type == "5등급 체제 (A, B, C, D, E)":
+            col1, col2, col3, col4 = st.columns(4)
+            with col1: cutoff_A = st.number_input("A등급 기준 점수 (이상)", value=90.0, step=1.0)
+            with col2: cutoff_B = st.number_input("B등급 기준 점수 (이상)", value=80.0, step=1.0)
+            with col3: cutoff_C = st.number_input("C등급 기준 점수 (이상)", value=70.0, step=1.0)
+            with col4: cutoff_D = st.number_input("D등급 기준 점수 (이상)", value=60.0, step=1.0)
+            # 5등급일 때 E등급은 D등급 미만 전원이 되므로 별도 입력 불필요
             
         else:
             col1, col2, col3, col4, col5 = st.columns(5)
@@ -68,7 +75,7 @@ if uploaded_file is not None:
             st.divider()
             
             # ----------------------------------------------------
-            # --- [분석 1] 전체 10점 단위 성적 분포 (동일) ---
+            # --- [분석 1] 전체 10점 단위 성적 분포 ---
             # ----------------------------------------------------
             st.subheader("1️⃣ 전체 학생 10점 단위 성적분포 (인원 및 비율)")
             
@@ -98,20 +105,21 @@ if uploaded_file is not None:
             # ----------------------------------------------------
             st.subheader(f"2️⃣ 전체 학생 성취점수 등급별 분포 ({subject_type.split()[0]})")
             
-            # 3등급 선택 시 구간 및 라벨 설정
+            # 선택한 등급 체제에 따라 유연하게 구간(bins)과 라벨 설정
             if subject_type == "3등급 체제 (A, B, C)":
                 grade_bins = [-1, cutoff_B, cutoff_A, 101]
                 grade_labels = ['C등급', 'B등급', 'A등급']
-            # 6등급 선택 시 구간 및 라벨 설정
+                
+            elif subject_type == "5등급 체제 (A, B, C, D, E)":
+                grade_bins = [-1, cutoff_D, cutoff_C, cutoff_B, cutoff_A, 101]
+                grade_labels = ['E등급', 'D등급', 'C등급', 'B등급', 'A등급']
+                
             else:
                 grade_bins = [-1, cutoff_E, cutoff_D, cutoff_C, cutoff_B, cutoff_A, 101]
                 grade_labels = ['미도달', 'E등급', 'D등급', 'C등급', 'B등급', 'A등급']
             
             grade_categories = pd.cut(scores, bins=grade_bins, labels=grade_labels, right=False)
             grade_counts = grade_categories.value_counts().reindex(reversed(grade_labels), fill_value=0)
-            
-            # 그래프용 데이터 프레임
-            df_grade_chart = pd.DataFrame({"인원 수(명)": grade_counts})
             
             # 가로형 표 데이터 구조 생성
             grade_data = {}
@@ -124,10 +132,6 @@ if uploaded_file is not None:
             
             df_grade_horizontal = pd.DataFrame(grade_data, index=['학생 수', '비율(%)'])
             st.dataframe(df_grade_horizontal, use_container_width=True)
-            
-            # 시각화 그래프 출력
-            st.markdown("**[성취 등급 분포 시각화]**")
-            st.bar_chart(df_grade_chart)
             
     except Exception as e:
         st.error(f"데이터를 처리하는 중 오류가 발생했습니다. 파일 형식을 확인해 주세요. (오류 내용: {e})")
