@@ -3,58 +3,43 @@ import pandas as pd
 import numpy as np
 
 # 웹 페이지 제목 및 설명
-st.set_page_config(page_title="성적 분석기", layout="centered")
-st.title("📊 성적 데이터 분석 시스템")
-st.markdown("특정 서식의 엑셀 파일에서 원하는 반의 성적 데이터만 추출하여 분석합니다.")
+st.set_page_config(page_title="정기고사 성적 분석", layout="centered")
+st.title("📊 통합 성적 데이터 분석 시스템")
+st.markdown("모든 반의 성적 데이터를 하나로 통합하여 전체 학생을 대상으로 성적 분포와 등급을 분석합니다.")
 
 # 1. 파일 업로드 기능
 uploaded_file = st.file_uploader("엑셀 파일을 업로드해 주세요 (.xlsx)", type=["xlsx"])
 
 if uploaded_file is not None:
     try:
-        # 서식에 맞춰 가공하기 위해 헤더 없이(header=None) 엑셀을 통째로 읽어옵니다.
+        # 서식에 맞춰 가공하기 위해 헤더 없이(header=None) 엑셀을 읽어옵니다.
         raw_df = pd.read_excel(uploaded_file, header=None)
         
         # ----------------------------------------------------
-        # [데이터 정제] 행과 열 위치 지정 처리
+        # [데이터 정제] 전체 학생 점수 통합 추출
         # ----------------------------------------------------
-        # 5행(파이썬 인덱스 4)의 B열(인덱스 1)부터 오른쪽 끝까지가 '반' 이름
+        # 5행(인덱스 4)의 B열(인덱스 1)부터 오른쪽 끝까지의 '반' 개수 파악
         class_labels = raw_df.iloc[4, 1:].dropna().tolist()
+        num_classes = len(class_labels)
         
-        # 6행(파이썬 인덱스 5)의 A열(인덱스 0)부터 아래로 '번호' 리스트 생성
-        # 하단에 '응시생수'나 숫자가 아닌 텍스트가 나오기 전까지만 자릅니다.
+        # 6행(인덱스 5)의 A열(인덱스 0)부터 아래로 내려가며 '응시생수' 행 위치 찾기
         id_series = raw_df.iloc[5:, 0]
-        
-        # '응시생수' 행의 위치 찾기 (문자열에 '응시' 또는 '수' 등이 포함되거나 숫자가 아닌 지점)
-        end_row_index = len(raw_df) # 기본값은 끝까지
+        end_row_index = len(raw_df) 
         for idx, val in enumerate(id_series):
             if pd.isna(val) or (isinstance(val, str) and ('응시' in val or '합계' in val or '통계' in val)):
-                end_row_index = 5 + idx  # 5행부터 시작했으므로 인덱스 보정
+                end_row_index = 5 + idx  
                 break
                 
-        # 실제 학생 점수 데이터만 슬라이싱
-        # 행: 6행(인덱스 5)부터 ~ '응시생수' 전까지
-        # 열: B열(인덱스 1)부터 ~ 반 개수만큼
-        score_matrix = raw_df.iloc[5:end_row_index, 1:1+len(class_labels)]
+        # 모든 반(열)의 점수 구역을 통째로 지정해서 가져옵니다.
+        score_matrix = raw_df.iloc[5:end_row_index, 1:1+num_classes]
         
-        # 가독성을 위해 데이터프레임 구조 재구성
-        student_ids = raw_df.iloc[5:end_row_index, 0].astype(str).tolist()
-        clean_df = pd.DataFrame(score_matrix.values, index=student_ids, columns=class_labels)
+        # 2차원 배열 형태의 점수들을 1차원 리스트로 일렬로 통합합니다 (전체 학생 합치기)
+        all_scores_flat = score_matrix.values.flatten()
         
-        st.success("파일 구조가 정상적으로 인식되었습니다!")
+        # 숫자로 강제 변환하고 결측치(공백, 결석 등)를 제거합니다.
+        scores = pd.to_numeric(pd.Series(all_scores_flat), errors='coerce').dropna()
         
-        # ----------------------------------------------------
-        # [화면 기능] 분석할 반 선택
-        # ----------------------------------------------------
-        selected_class = st.selectbox("분석할 반을 선택하세요:", class_labels)
-        
-        # 선택된 반의 점수 데이터 추출 및 숫자로 강제 변환 (공백이나 누락 데이터 제외)
-        scores = pd.to_numeric(clean_df[selected_class], errors='coerce').dropna()
-        
-        # 학생 목록 미리보기 (선택 사항)
-        with st.expander(f"👁️ {selected_class} 데이터 확인 (총 {len(scores)}명)"):
-            preview_df = pd.DataFrame({"번호": scores.index, "점수": scores.values})
-            st.dataframe(preview_df, use_container_width=True, hide_index=True)
+        st.success(f"총 {num_classes}개 반, 전체 {len(scores)}명의 성적 데이터가 통합되었습니다!")
         
         st.divider()
         
@@ -67,11 +52,11 @@ if uploaded_file is not None:
         with col4: cutoff_D = st.number_input("D등급 이상", value=60.0, step=1.0)
         with col5: cutoff_E = st.number_input("E등급 이상", value=50.0, step=1.0)
         
-        if st.button("📊 성적 분석 시작", type="primary"):
+        if st.button("📊 통합 성적 분석 시작", type="primary"):
             st.divider()
             
-            # --- [분석 1] 10점 단위 성적 분포 ---
-            st.subheader(f"1️⃣ [{selected_class}] 10점 단위 성적분포인원")
+            # --- [분석 1] 전체 10점 단위 성적 분포 ---
+            st.subheader("1️⃣ 전체 학생 10점 단위 성적분포인원")
             
             dist_bins = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 101]
             dist_labels = [
@@ -82,16 +67,16 @@ if uploaded_file is not None:
             dist_categories = pd.cut(scores, bins=dist_bins, labels=dist_labels, right=False)
             dist_counts = dist_categories.value_counts().reindex(dist_labels, fill_value=0)
             
+            # 표 형태로 변환 및 총합계 행 추가
             df_dist = pd.DataFrame({"인원 수(명)": dist_counts})
-            st.dataframe(df_dist, use_container_width=True)
+            df_dist.loc['총합계'] = df_dist["인원 수(명)"].sum()
             
-            total_calculated = dist_counts.sum()
-            st.info(f"💡 **분포 인원 합계 (총 응시학생 수): {total_calculated}명**")
+            st.dataframe(df_dist, use_container_width=True)
             
             st.divider()
             
-            # --- [분석 2] 성취 등급별 인원 ---
-            st.subheader(f"2️⃣ [{selected_class}] 성취점수 등급별 인원")
+            # --- [분석 2] 전체 성취 등급별 인원 ---
+            st.subheader("2️⃣ 전체 학생 성취점수 등급별 인원")
             
             grade_bins = [-1, cutoff_E, cutoff_D, cutoff_C, cutoff_B, cutoff_A, 101]
             grade_labels = ['미도달', 'E등급', 'D등급', 'C등급', 'B등급', 'A등급']
@@ -99,9 +84,20 @@ if uploaded_file is not None:
             grade_categories = pd.cut(scores, bins=grade_bins, labels=grade_labels, right=False)
             grade_counts = grade_categories.value_counts().reindex(reversed(grade_labels), fill_value=0)
             
+            # 표 형태로 변환 및 총합계 행 추가
             df_grade = pd.DataFrame({"인원 수(명)": grade_counts})
+            
+            # 그래프를 그릴 때는 '총합계' 행이 들어가면 막대가 너무 길어지므로, 그래프용 데이터를 먼저 복사해둡니다.
+            df_grade_chart = df_grade.copy()
+            
+            # 실제 화면 표에는 총합계 추가
+            df_grade.loc['총합계'] = df_grade["인원 수(명)"].sum()
+            
             st.dataframe(df_grade, use_container_width=True)
-            st.bar_chart(df_grade)
+            
+            # 시각화 그래프 출력 (합계 제외한 순수 등급만 표현)
+            st.markdown("**[성취 등급 분포 시각화]**")
+            st.bar_chart(df_grade_chart)
             
     except Exception as e:
         st.error(f"데이터를 처리하는 중 오류가 발생했습니다. 파일 형식을 확인해 주세요. (오류 내용: {e})")
