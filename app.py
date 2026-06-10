@@ -3,9 +3,9 @@ import pandas as pd
 import numpy as np
 
 # 웹 페이지 제목 및 설명
-st.set_page_config(page_title="통합 성적 분석기", layout="centered")
-st.title("📊 통합 성적 데이터 분석 시스템")
-st.markdown("모든 반의 성적 데이터를 하나로 통합하여 가로형 표로 성적 분포와 등급을 분석합니다.")
+st.set_page_config(page_title="정기고사 성적 분석기", layout="centered")
+st.title("📊 정기고사 성적 분석")
+st.markdown("나이스-지필평가조회-교과목별일람표-전체학급 파일(XLS Data)을 저장하고 불러오시면 됩니다.")
 
 # 1. 파일 업로드 기능
 uploaded_file = st.file_uploader("엑셀 파일을 업로드해 주세요 (.xlsx)", type=["xlsx"])
