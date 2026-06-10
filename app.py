@@ -3,9 +3,9 @@ import pandas as pd
 import numpy as np
 
 # 웹 페이지 제목 및 설명
-st.set_page_config(page_title="정기고사 성적 분석", layout="centered")
+st.set_page_config(page_title="통합 성적 분석기", layout="centered")
 st.title("📊 통합 성적 데이터 분석 시스템")
-st.markdown("모든 반의 성적 데이터를 하나로 통합하여 전체 학생을 대상으로 성적 분포와 등급을 분석합니다.")
+st.markdown("모든 반의 성적 데이터를 하나로 통합하여 가로형 표로 성적 분포와 등급(인원 및 비율)을 분석합니다.")
 
 # 1. 파일 업로드 기능
 uploaded_file = st.file_uploader("엑셀 파일을 업로드해 주세요 (.xlsx)", type=["xlsx"])
@@ -33,13 +33,14 @@ if uploaded_file is not None:
         # 모든 반(열)의 점수 구역을 통째로 지정해서 가져옵니다.
         score_matrix = raw_df.iloc[5:end_row_index, 1:1+num_classes]
         
-        # 2차원 배열 형태의 점수들을 1차원 리스트로 일렬로 통합합니다 (전체 학생 합치기)
+        # 2차원 배열 형태의 점수들을 1차원 리스트로 일렬로 통합합니다.
         all_scores_flat = score_matrix.values.flatten()
         
         # 숫자로 강제 변환하고 결측치(공백, 결석 등)를 제거합니다.
         scores = pd.to_numeric(pd.Series(all_scores_flat), errors='coerce').dropna()
+        total_students = len(scores)
         
-        st.success(f"총 {num_classes}개 반, 전체 {len(scores)}명의 성적 데이터가 통합되었습니다!")
+        st.success(f"총 {num_classes}개 반, 전체 {total_students}명의 성적 데이터가 통합되었습니다!")
         
         st.divider()
         
@@ -55,8 +56,10 @@ if uploaded_file is not None:
         if st.button("📊 통합 성적 분석 시작", type="primary"):
             st.divider()
             
-            # --- [분석 1] 전체 10점 단위 성적 분포 ---
-            st.subheader("1️⃣ 전체 학생 10점 단위 성적분포인원")
+            # ----------------------------------------------------
+            # --- [분석 1] 전체 10점 단위 성적 분포 (가로형) ---
+            # ----------------------------------------------------
+            st.subheader("1️⃣ 전체 학생 10점 단위 성적분포 (인원 및 비율)")
             
             dist_bins = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 101]
             dist_labels = [
@@ -67,16 +70,26 @@ if uploaded_file is not None:
             dist_categories = pd.cut(scores, bins=dist_bins, labels=dist_labels, right=False)
             dist_counts = dist_categories.value_counts().reindex(dist_labels, fill_value=0)
             
-            # 표 형태로 변환 및 총합계 행 추가
-            df_dist = pd.DataFrame({"인원 수(명)": dist_counts})
-            df_dist.loc['총합계'] = df_dist["인원 수(명)"].sum()
+            # 가로형 표를 만들기 위한 딕셔너리 데이터 구조 생성
+            dist_data = {}
+            for label in dist_labels:
+                count = dist_counts[label]
+                pct = (count / total_students * 100) if total_students > 0 else 0
+                dist_data[label] = [f"{count}명", f"{pct:.1f}%"]
             
-            st.dataframe(df_dist, use_container_width=True)
+            # 총합계 추가
+            dist_data['총합계'] = [f"{total_students}명", "100.0%"]
+            
+            # 데이터프레임 생성 (인덱스를 '구분'으로 설정)
+            df_dist_horizontal = pd.DataFrame(dist_data, index=['학생 수', '비율(%)'])
+            st.dataframe(df_dist_horizontal, use_container_width=True)
             
             st.divider()
             
-            # --- [분석 2] 전체 성취 등급별 인원 ---
-            st.subheader("2️⃣ 전체 학생 성취점수 등급별 인원")
+            # ----------------------------------------------------
+            # --- [분석 2] 전체 성취 등급별 인원 (가로형) ---
+            # ----------------------------------------------------
+            st.subheader("2️⃣ 전체 학생 성취점수 등급별 분포 (인원 및 비율)")
             
             grade_bins = [-1, cutoff_E, cutoff_D, cutoff_C, cutoff_B, cutoff_A, 101]
             grade_labels = ['미도달', 'E등급', 'D등급', 'C등급', 'B등급', 'A등급']
@@ -84,18 +97,24 @@ if uploaded_file is not None:
             grade_categories = pd.cut(scores, bins=grade_bins, labels=grade_labels, right=False)
             grade_counts = grade_categories.value_counts().reindex(reversed(grade_labels), fill_value=0)
             
-            # 표 형태로 변환 및 총합계 행 추가
-            df_grade = pd.DataFrame({"인원 수(명)": grade_counts})
+            # 그래프용 순수 숫자 데이터프레임 (차트 표현용)
+            df_grade_chart = pd.DataFrame({"인원 수(명)": grade_counts})
             
-            # 그래프를 그릴 때는 '총합계' 행이 들어가면 막대가 너무 길어지므로, 그래프용 데이터를 먼저 복사해둡니다.
-            df_grade_chart = df_grade.copy()
+            # 가로형 표를 만들기 위한 데이터 구조 생성 (A등급부터 역순 표시)
+            grade_data = {}
+            for label in reversed(grade_labels):
+                count = grade_counts[label]
+                pct = (count / total_students * 100) if total_students > 0 else 0
+                grade_data[label] = [f"{count}명", f"{pct:.1f}%"]
+                
+            # 총합계 추가
+            grade_data['총합계'] = [f"{total_students}명", "100.0%"]
             
-            # 실제 화면 표에는 총합계 추가
-            df_grade.loc['총합계'] = df_grade["인원 수(명)"].sum()
+            # 데이터프레임 생성
+            df_grade_horizontal = pd.DataFrame(grade_data, index=['학생 수', '비율(%)'])
+            st.dataframe(df_grade_horizontal, use_container_width=True)
             
-            st.dataframe(df_grade, use_container_width=True)
-            
-            # 시각화 그래프 출력 (합계 제외한 순수 등급만 표현)
+            # 시각화 그래프 출력
             st.markdown("**[성취 등급 분포 시각화]**")
             st.bar_chart(df_grade_chart)
             
