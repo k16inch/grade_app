@@ -3,9 +3,9 @@ import pandas as pd
 import numpy as np
 
 # 웹 페이지 제목 및 설명
-st.set_page_config(page_title="정기고사 성적 분석기", layout="centered")
-st.title("📊 정기고사 성적 분석 작업")
-st.markdown("나이스-지필평가조회-교과목별일람표-전체학급 파일(XLS Data)을 저장하고 불러오시면 됩니다.")
+st.set_page_config(page_title="통합 성적 분석기", layout="centered")
+st.title("📊 통합 성적 데이터 분석 시스템")
+st.markdown("모든 반의 성적 데이터를 하나로 통합하여 가로형 표로 성적 분포와 등급을 분석합니다.")
 
 # 1. 파일 업로드 기능
 uploaded_file = st.file_uploader("엑셀 파일을 업로드해 주세요 (.xlsx)", type=["xlsx"])
@@ -33,7 +33,7 @@ if uploaded_file is not None:
         scores = pd.to_numeric(pd.Series(all_scores_flat), errors='coerce').dropna()
         total_students = len(scores)
         
-        st.success(f"총 {num_classes}개 반, 전체 {total_students}명의 성적 데이터가 입력되었습니다!")
+        st.success(f"총 {num_classes}개 반, 전체 {total_students}명의 성적 데이터가 통합되었습니다!")
         
         st.divider()
         
@@ -61,7 +61,6 @@ if uploaded_file is not None:
             with col2: cutoff_B = st.number_input("B등급 기준 점수 (이상)", value=80.0, step=1.0)
             with col3: cutoff_C = st.number_input("C등급 기준 점수 (이상)", value=70.0, step=1.0)
             with col4: cutoff_D = st.number_input("D등급 기준 점수 (이상)", value=60.0, step=1.0)
-            # 5등급일 때 E등급은 D등급 미만 전원이 되므로 별도 입력 불필요
             
         else:
             col1, col2, col3, col4, col5 = st.columns(5)
@@ -75,7 +74,7 @@ if uploaded_file is not None:
             st.divider()
             
             # ----------------------------------------------------
-            # --- [분석 1] 전체 10점 단위 성적 분포 ---
+            # --- [분석 1] 전체 10점 단위 성적 분포 (내림차순 정렬) ---
             # ----------------------------------------------------
             st.subheader("1️⃣ 전체 학생 10점 단위 성적분포 (인원 및 비율)")
             
@@ -88,8 +87,9 @@ if uploaded_file is not None:
             dist_categories = pd.cut(scores, bins=dist_bins, labels=dist_labels, right=False)
             dist_counts = dist_categories.value_counts().reindex(dist_labels, fill_value=0)
             
+            # 높은 점수부터 나열하기 위해 dist_labels를 역순(reversed)으로 순회하여 딕셔너리 구성
             dist_data = {}
-            for label in dist_labels:
+            for label in reversed(dist_labels):
                 count = dist_counts[label]
                 pct = (count / total_students * 100) if total_students > 0 else 0
                 dist_data[label] = [f"{count}명", f"{pct:.1f}%"]
@@ -105,7 +105,6 @@ if uploaded_file is not None:
             # ----------------------------------------------------
             st.subheader(f"2️⃣ 전체 학생 성취점수 등급별 분포 ({subject_type.split()[0]})")
             
-            # 선택한 등급 체제에 따라 유연하게 구간(bins)과 라벨 설정
             if subject_type == "3등급 체제 (A, B, C)":
                 grade_bins = [-1, cutoff_B, cutoff_A, 101]
                 grade_labels = ['C등급', 'B등급', 'A등급']
@@ -121,7 +120,6 @@ if uploaded_file is not None:
             grade_categories = pd.cut(scores, bins=grade_bins, labels=grade_labels, right=False)
             grade_counts = grade_categories.value_counts().reindex(reversed(grade_labels), fill_value=0)
             
-            # 가로형 표 데이터 구조 생성
             grade_data = {}
             for label in reversed(grade_labels):
                 count = grade_counts[label]
