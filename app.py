@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 
-st.title("학급 성적 분석기")
-uploaded_file = st.file_uploader("성적 엑셀 파일을 업로드하세요", type=["xlsx"])
+st.title("정기고사 성적 분석기")
+uploaded_file = st.file_uploader("나이스에서 XLXS DATA 파일을 업로드하세요", type=["xlsx"])
 
 if uploaded_file is not None:
     # 엑셀 파일 읽기
