@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 
 # 웹 페이지 제목 및 설명
-st.set_page_config(page_title="통합 성적 분석기", layout="centered")
-st.title("📊 통합 성적 데이터 분석 시스템")
+st.set_page_config(page_title="정기고사 성적 분석기", layout="centered")
+st.title("📊 정기고사 성적 분석기")
 st.markdown("모든 반의 성적 데이터를 하나로 통합하여 가로형 표로 성적 분포와 등급을 분석합니다.")
 
 # 1. 파일 업로드 기능
