@@ -5,7 +5,7 @@ import numpy as np
 # 웹 페이지 제목 및 설명
 st.set_page_config(page_title="정기고사 성적 분석기", layout="centered")
 st.title("📊 정기고사 성적 분석기")
-st.markdown("모든 반의 성적 데이터를 하나로 통합하여 가로형 표로 성적 분포와 등급을 분석합니다.")
+st.markdown("나이스-교과담임-정기시험조회-교과목별일람표조회(전체학급) 파일을 다운로드하세요.(XLS data파일만 가능).")
 
 # 1. 파일 업로드 기능
 uploaded_file = st.file_uploader("엑셀 파일을 업로드해 주세요 (.xlsx)", type=["xlsx"])
@@ -33,7 +33,7 @@ if uploaded_file is not None:
         scores = pd.to_numeric(pd.Series(all_scores_flat), errors='coerce').dropna()
         total_students = len(scores)
         
-        st.success(f"총 {num_classes}개 반, 전체 {total_students}명의 성적 데이터가 통합되었습니다!")
+        st.success(f"총 {num_classes}개 반, 전체 {total_students}명의 성적 데이터가 입력되었습니다!")
         
         st.divider()
         
