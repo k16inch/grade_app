@@ -74,7 +74,25 @@ if uploaded_file is not None:
             st.divider()
             
             # ----------------------------------------------------
-            # --- [분석 1] 전체 10점 단위 성적 분포 (내림차순 정렬) ---
+            # 📈 전체 학생 성적 요약 (평균, 최고, 최하점수 추가)
+            # ----------------------------------------------------
+            st.subheader("📈 전체 학생 성적 요약")
+            if total_students > 0:
+                mean_score = scores.mean()
+                max_score = scores.max()
+                min_score = scores.min()
+                
+                m1, m2, m3 = st.columns(3)
+                m1.metric(label="평균 점수", value=f"{mean_score:.1f}점")
+                m2.metric(label="최고 점수", value=f"{max_score}점")
+                m3.metric(label="최하 점수", value=f"{min_score}점")
+            else:
+                st.info("분석할 성적 데이터가 없습니다.")
+                
+            st.divider()
+            
+            # ----------------------------------------------------
+            # --- [분석 1] 전체 10점 단위 성적 분포 ---
             # ----------------------------------------------------
             st.subheader("1️⃣ 전체 학생 10점 단위 성적분포 (인원 및 비율)")
             
@@ -87,7 +105,6 @@ if uploaded_file is not None:
             dist_categories = pd.cut(scores, bins=dist_bins, labels=dist_labels, right=False)
             dist_counts = dist_categories.value_counts().reindex(dist_labels, fill_value=0)
             
-            # 높은 점수부터 나열하기 위해 dist_labels를 역순(reversed)으로 순회하여 딕셔너리 구성
             dist_data = {}
             for label in reversed(dist_labels):
                 count = dist_counts[label]
