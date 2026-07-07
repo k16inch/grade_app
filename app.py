@@ -8,7 +8,7 @@ st.title("📊 정기고사 성적 분석기")
 st.markdown("나이스-교과담임-정기시험조회-교과목별일람표조회(전체학급) XLS data파일을 다운로드하세요.")
 
 # 1. 파일 업로드 기능
-uploaded_file = st.file_uploader("엑셀 파일을 업로드해 주세요 (.xlsx)", type=["xlsx"])
+uploaded_file = st.file_uploader("나이스에서 다운로드한 엑셀 파일을 업로드해 주세요 (.xlsx)", type=["xlsx"])
 
 if uploaded_file is not None:
     try:
